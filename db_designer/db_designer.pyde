@@ -32,6 +32,8 @@ class State(object):
     def keyReleased(self):
         pass
 
+    def keyTyped(self):
+        pass
 
 class _ReadyState(State):
 
@@ -148,7 +150,7 @@ class _ColumnEdit(State):
         application.editing_column.edit = False
         application.editing_column = None
 
-    def keyReleased(self):
+    def keyTyped(self):
         if key == RETURN:
             application.changeState(SelectedTable)
         elif key == ENTER:
@@ -386,3 +388,6 @@ def keyPressed():
 
 def keyReleased():
     application.state.keyReleased()
+
+def keyTyped():
+    application.state.keyTyped()
