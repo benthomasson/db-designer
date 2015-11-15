@@ -1,4 +1,9 @@
 
+
+import os
+import yaml
+import traceback
+
 page_height = 768
 page_width = 1024
 
@@ -35,6 +40,9 @@ class State(object):
     def keyTyped(self):
         pass
 
+    def fileSelected(self, selected):
+        pass
+
 class _ReadyState(State):
 
     def name(self):
@@ -69,11 +77,43 @@ class _MenuWheel(State):
     def start(self):
         application.wheel = Wheel(mouseX, mouseY)
 
-    def mouseReleased(self):
-        application.changeState(ReadyState)
+    def end(self):
         application.wheel = None
 
+    def mouseReleased(self):
+        menu_selection = application.wheel.get_menu_selection()
+        if menu_selection == "New":
+            application.changeState(NewTable)
+        elif menu_selection == "Save":
+            application.changeState(Save)
+        else:
+            application.changeState(ReadyState)
+
 MenuWheel = _MenuWheel()
+
+class _Save(State):
+
+    def name(self):
+        return "Save"
+
+    def start(self):
+        selectOutput("Output file", "fileSelected")
+
+    def fileSelected(self, selection):
+        try:
+            print selection, type(selection)
+            if selection:
+                app = {}
+                app['app'] = os.path.splitext(os.path.basename(selection.getAbsolutePath()))[0]
+                app['models'] = [t.to_dict() for t in tables]
+                with open(selection.getAbsolutePath(), 'w') as f:
+                    f.write(yaml.safe_dump(app, default_flow_style=False))
+            print "Wrote to {0}".format(selection)
+            application.changeState(ReadyState)
+        except Exception:
+            print traceback.format_exc()
+
+Save = _Save()
 
 class _SelectedTable(State):
 
@@ -100,6 +140,19 @@ class _SelectedTable(State):
         application.changeState(MoveTable)
 
 SelectedTable = _SelectedTable()
+
+
+class _NewTable(State):
+
+    def name(self):
+        return "New Table!"
+
+    def start(self):
+        t = Table(name="New", x=mouseX, y=mouseY)
+        tables.append(t)
+        application.changeState(ReadyState)
+
+NewTable = _NewTable()
 
 
 class _MoveTable(State):
@@ -174,6 +227,18 @@ class Wheel(object):
         self.x = x
         self.y = y
 
+    def get_menu_selection(self):
+        if mouseX < self.x and mouseY < self.y:
+            return "New"
+        elif mouseX > self.x and mouseY > self.y:
+            return "Save"
+        elif mouseX > self.x and mouseY < self.y:
+            return "Bar"
+        elif mouseX < self.x and mouseY > self.y:
+            return "Foo"
+        return None
+
+
     def draw(self):
         if self.x and self.y:
             noFill()
@@ -181,10 +246,14 @@ class Wheel(object):
             strokeWeight(2)
             ellipse(self.x, self.y, 100, 100)
             textSize(24)
-            text("New", self.x, self.y - 55)
-            text("Save", self.x, self.y + 55 + 24)
-            text("Foo", self.x - 55 - textWidth("Foo"), self.y)
-            text("Bar", self.x + 55, self.y)
+            text("New", self.x - 55, self.y - 55)
+            text("Save", self.x + 55, self.y + 55 + 24)
+            text("Foo", self.x - 55 - textWidth("Foo"), self.y + 55)
+            text("Bar", self.x + 55, self.y - 55)
+            line(self.x, self.y, self.x + 50, self.y)
+            line(self.x, self.y, self.x - 50, self.y)
+            line(self.x, self.y, self.x, self.y - 50)
+            line(self.x, self.y, self.x, self.y + 50)
             line(self.x, self.y, mouseX, mouseY)
 
 
@@ -232,6 +301,14 @@ class Table(object):
         self.height = 0
         self.full_height = 0
         self.__dict__.update(kwargs)
+
+    def to_dict(self):
+        d = {}
+        d['name'] = self.name
+        d['fields'] = fields = []
+        for column in self.columns:
+            fields.append(column.to_dict())
+        return d
 
     def _calculate_width(self):
         textSize(self.text_size)
@@ -309,6 +386,11 @@ class Column(object):
         self.text_size = 24
         self.__dict__.update(kwargs)
 
+    def to_dict(self):
+        d = {}
+        d['name'] = self.name
+        return d
+
     def _calculate_width(self):
         textSize(self.text_size)
         width = textWidth(self.name)
@@ -356,7 +438,11 @@ def setup():
 
     application = Application()
     size(page_width, page_height)
-    t = Table(name="Gorilla", color="#804000", text_color=255, x=100, y=100)
+    t = Table(name="Gorilla",
+              color="#804000",
+              text_color=255,
+              x=100,
+              y=100)
     t.columns.append(Column(name="name"))
     t.columns.append(Column(name="is_alive_and_still_kicking"))
     tables.append(t)
@@ -391,3 +477,6 @@ def keyReleased():
 
 def keyTyped():
     application.state.keyTyped()
+
+def fileSelected(selection):
+    application.state.fileSelected(selection)
