@@ -45,13 +45,8 @@ class State(object):
     def fileSelected(self, selected):
         pass
 
-class _ReadyState(State):
+    def mouse_select(self):
 
-    def name(self):
-        return "Ready"
-
-    def mousePressed(self):
-        application.selected_table = None
         for table in tables:
             if (mouseX > table.left_extent and
                 mouseX < table.right_extent and
@@ -62,9 +57,28 @@ class _ReadyState(State):
                  application.changeState(SelectedTable)
             else:
                 table.selected = False
-
+        if application.selected_table:
+            table = application.selected_table
+            for column in table.columns:
+                if (mouseX > column.left_extent and
+                    mouseX < column.right_extent and
+                    mouseY > column.top_extent and
+                    mouseY < column.bottom_extent):
+                     application.editing_column = column
+                     application.changeState(ColumnEdit)
         if application.selected_table is None:
             application.changeState(MenuWheel)
+
+
+
+class _ReadyState(State):
+
+    def name(self):
+        return "Ready"
+
+    def mousePressed(self):
+        application.selected_table = None
+        self.mouse_select()
 
     def mouseDragged(self):
         application.changeState(MenuWheel)
@@ -88,10 +102,52 @@ class _MenuWheel(State):
             application.changeState(NewTable)
         elif menu_selection == "Save":
             application.changeState(Save)
+        elif menu_selection == "Load":
+            application.changeState(Load)
         else:
             application.changeState(ReadyState)
 
 MenuWheel = _MenuWheel()
+
+class _Load(State):
+
+    def name(self):
+        return "Loading from file"
+
+    def start(self):
+        selectInput("Input file", "fileSelected")
+
+    def fileSelected(self, selection):
+        global tables
+        tables = []
+        try:
+            print selection, type(selection)
+            if selection:
+                with open(selection.getAbsolutePath()) as f:
+                    d = yaml.load(f.read())
+                    print d
+                for model in d.get('models'):
+                    table = Table(name=model.get('name'),
+                                  x=model.get('x'),
+                                  y=model.get('y'))
+                    tables.append(table)
+                    for field in model.get('fields'):
+                        name = field.get('name')
+                        ftype = field.get('type')
+                        flen = field.get('len')
+                        ref = field.get('ref')
+                        column = Column(name=":".join(map(str, filter(None, [name, ftype, flen, ref]))),
+                                        x=model.get('x'),
+                                        y=model.get('y'))
+                        table.columns.append(column)
+            print "Read from {0}".format(selection)
+            application.changeState(ReadyState)
+        except Exception:
+            print traceback.format_exc()
+
+
+Load = _Load()
+
 
 class _Save(State):
 
@@ -125,7 +181,11 @@ class _SelectedTable(State):
     def start(self):
         if application.selected_table:
             application.selected_table.delete_empty_columns()
-            application.selected_table.add_new_column()
+            application.selected_table.add_empty_column()
+
+    def end(self):
+        if application.selected_table:
+            application.selected_table.delete_empty_columns()
 
     def mousePressed(self):
         table = application.selected_table
@@ -133,8 +193,10 @@ class _SelectedTable(State):
                 mouseX < table.right_extent and
                 mouseY > table.top_extent and
                 mouseY < table.bottom_extent):
+            self.end()
             table.selected = False
-            application.changeState(ReadyState)
+            application.selected_table = None
+            self.mouse_select()
             return
         if (mouseX > table.left_title_extent and
             mouseX < table.right_title_extent and
@@ -142,6 +204,7 @@ class _SelectedTable(State):
             mouseY < table.bottom_title_extent):
             application.changeState(NameEdit)
             return
+
         for column in table.columns:
             if (mouseX > column.left_extent and
                 mouseX < column.right_extent and
@@ -149,6 +212,8 @@ class _SelectedTable(State):
                 mouseY < column.bottom_extent):
                  application.editing_column = column
                  application.changeState(ColumnEdit)
+                 return
+
 
     def mouseDragged(self):
         application.changeState(MoveTable)
@@ -204,10 +269,22 @@ class _NameEdit(State):
         return "Editing {0}".format(application.selected_table.name)
 
     def start(self):
-        application.selected_table.edit = True
+        if application.selected_table:
+            application.selected_table.edit = True
 
     def end(self):
-        application.selected_table.edit = False
+        if application.selected_table:
+            application.selected_table.edit = False
+
+    def mousePressed(self):
+        table = application.selected_table
+        if not (mouseX > table.left_title_extent and
+                mouseX < table.right_title_extent and
+                mouseY > table.top_title_extent and
+                mouseY < table.bottom_title_extent):
+            application.selected_table.edit = False
+            application.selected_table = None
+            self.mouse_select()
 
     def mouseDragged(self):
         application.changeState(MoveTable)
@@ -237,14 +314,19 @@ class _ColumnEdit(State):
                 mouseX < column.right_extent and
                 mouseY > column.top_extent and
                 mouseY < column.bottom_extent):
-            application.changeState(SelectedTable)
+            self.end()
+            application.selected_table = None
+            self.mouse_select()
 
     def start(self):
         application.editing_column.edit = True
 
     def end(self):
-        application.editing_column.edit = False
-        application.editing_column = None
+        if application.editing_column:
+            application.editing_column.edit = False
+            application.editing_column = None
+        if application.selected_table:
+            application.selected_table.delete_empty_columns()
 
     def keyTyped(self):
         if key == RETURN:
@@ -274,9 +356,7 @@ class Wheel(object):
         elif mouseX > self.x and mouseY > self.y:
             return "Save"
         elif mouseX > self.x and mouseY < self.y:
-            return "Bar"
-        elif mouseX < self.x and mouseY > self.y:
-            return "Foo"
+            return "Load"
         return None
 
 
@@ -289,8 +369,7 @@ class Wheel(object):
             textSize(TEXT_SIZE)
             text("New", self.x - 55, self.y - 55)
             text("Save", self.x + 55, self.y + 55 + TEXT_SIZE)
-            text("Foo", self.x - 55 - textWidth("Foo"), self.y + 55)
-            text("Bar", self.x + 55, self.y - 55)
+            text("Load", self.x + 55, self.y - 55)
             line(self.x, self.y, self.x + 50, self.y)
             line(self.x, self.y, self.x - 50, self.y)
             line(self.x, self.y, self.x, self.y - 50)
@@ -332,7 +411,7 @@ class Table(object):
         self.edit = False
         self.selected = False
         self.columns = []
-        self.color = 255
+        self.color = 200
         self.text_color = 0
         self.text_size = TEXT_SIZE
         self.name = None
@@ -343,20 +422,24 @@ class Table(object):
         self.full_height = 0
         self.__dict__.update(kwargs)
 
-    def add_new_column(self):
-        self.columns.append(Column())
+    def add_empty_column(self):
+        if all([c.name for c in self.columns]):
+            self.columns.append(Column())
 
     def delete_empty_columns(self):
-        for c in self.columns[:]:
-            if not c.name:
+        for c in self.columns[:-1]:
+            if not c.name and c.edit is False:
                 self.columns.remove(c)
 
     def to_dict(self):
         d = {}
         d['name'] = self.name
         d['fields'] = fields = []
+        d['x'] = self.x
+        d['y'] = self.y
         for column in self.columns:
-            fields.append(column.to_dict())
+            if column.name:
+                fields.append(column.to_dict())
         return d
 
     def _calculate_width(self):
@@ -438,6 +521,7 @@ class Table(object):
     def bottom_extent(self):
         return self.y + self.full_height
 
+
 class Column(object):
 
     def __init__(self, **kwargs):
@@ -445,8 +529,6 @@ class Column(object):
         self.y = 0
         self.edit = False
         self.name = ""
-        self.type = None
-        self.len = None
         self.ref = None
         self.width = 100
         self.height = 100
@@ -455,7 +537,17 @@ class Column(object):
 
     def to_dict(self):
         d = {}
-        d['name'] = self.name
+        d['name'], _, rest = self.name.partition(":")
+        if rest:
+            d['type'], _, rest = rest.partition(":")
+        if rest:
+            try:
+                d['len'], _, rest = rest.partition(":")
+                d['len'] = int(d['len'])
+            except ValueError:
+                pass
+        d['x'] = self.x
+        d['y'] = self.y
         return d
 
     def _calculate_width(self):
@@ -500,6 +592,17 @@ class Column(object):
         return self.y + self.height
 
 
+class ForeignKey(object):
+
+    def __init__(self, **kwargs):
+        self.from_column = None
+        self.to_column = None
+
+    def draw(self):
+        if self.from_column and self.to_column:
+            pass
+
+
 def setup():
     global tables, application
     frameRate(30)
@@ -508,14 +611,6 @@ def setup():
 
     application = Application()
     size(page_width, page_height)
-    t = Table(name="Gorilla",
-              color="#804000",
-              text_color=255,
-              x=100,
-              y=100)
-    t.columns.append(Column(name="name"))
-    t.columns.append(Column(name="is_alive_and_still_kicking"))
-    tables.append(t)
 
 
 def draw():
