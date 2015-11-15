@@ -7,6 +7,8 @@ import traceback
 page_height = 768
 page_width = 1024
 
+TEXT_SIZE = 18
+
 tables = []
 application = None
 
@@ -120,6 +122,11 @@ class _SelectedTable(State):
     def name(self):
         return "Selected " + application.selected_table.name
 
+    def start(self):
+        if application.selected_table:
+            application.selected_table.delete_empty_columns()
+            application.selected_table.add_new_column()
+
     def mousePressed(self):
         table = application.selected_table
         if not (mouseX > table.left_extent and
@@ -128,6 +135,13 @@ class _SelectedTable(State):
                 mouseY < table.bottom_extent):
             table.selected = False
             application.changeState(ReadyState)
+            return
+        if (mouseX > table.left_title_extent and
+            mouseX < table.right_title_extent and
+            mouseY > table.top_title_extent and
+            mouseY < table.bottom_title_extent):
+            application.changeState(NameEdit)
+            return
         for column in table.columns:
             if (mouseX > column.left_extent and
                 mouseX < column.right_extent and
@@ -138,6 +152,14 @@ class _SelectedTable(State):
 
     def mouseDragged(self):
         application.changeState(MoveTable)
+
+
+    def keyTyped(self):
+        if key == DELETE or key == BACKSPACE:
+            application.selected_table.selected = False
+            tables.remove(application.selected_table)
+            application.changeState(ReadyState)
+
 
 SelectedTable = _SelectedTable()
 
@@ -181,6 +203,27 @@ class _NameEdit(State):
     def name(self):
         return "Editing {0}".format(application.selected_table.name)
 
+    def start(self):
+        application.selected_table.edit = True
+
+    def end(self):
+        application.selected_table.edit = False
+
+    def mouseDragged(self):
+        application.changeState(MoveTable)
+
+    def keyTyped(self):
+        if key == RETURN:
+            application.changeState(SelectedTable)
+        elif key == ENTER:
+            application.changeState(SelectedTable)
+        elif key == BACKSPACE:
+            application.selected_table.name = application.selected_table.name[:-1]
+        elif key == DELETE:
+            application.selected_table.name = application.selected_table.name[:-1]
+        else:
+            application.selected_table.name += key
+
 NameEdit = _NameEdit()
 
 class _ColumnEdit(State):
@@ -215,8 +258,6 @@ class _ColumnEdit(State):
         else:
             application.editing_column.name += key
 
-    def mouseDragged(self):
-        application.changeState(MoveTable)
 
 ColumnEdit = _ColumnEdit()
 
@@ -245,9 +286,9 @@ class Wheel(object):
             stroke(0)
             strokeWeight(2)
             ellipse(self.x, self.y, 100, 100)
-            textSize(24)
+            textSize(TEXT_SIZE)
             text("New", self.x - 55, self.y - 55)
-            text("Save", self.x + 55, self.y + 55 + 24)
+            text("Save", self.x + 55, self.y + 55 + TEXT_SIZE)
             text("Foo", self.x - 55 - textWidth("Foo"), self.y + 55)
             text("Bar", self.x + 55, self.y - 55)
             line(self.x, self.y, self.x + 50, self.y)
@@ -273,7 +314,7 @@ class Application(object):
 
     def draw(self):
         fill(255)
-        textSize(48)
+        textSize(TEXT_SIZE)
         text(self.state.name(),
              page_width - 100 - textWidth(self.state.name()),
              page_height - 100)
@@ -293,7 +334,7 @@ class Table(object):
         self.columns = []
         self.color = 255
         self.text_color = 0
-        self.text_size = 48
+        self.text_size = TEXT_SIZE
         self.name = None
         self.x = None
         self.y = None
@@ -301,6 +342,14 @@ class Table(object):
         self.height = 0
         self.full_height = 0
         self.__dict__.update(kwargs)
+
+    def add_new_column(self):
+        self.columns.append(Column())
+
+    def delete_empty_columns(self):
+        for c in self.columns[:]:
+            if not c.name:
+                self.columns.remove(c)
 
     def to_dict(self):
         d = {}
@@ -358,6 +407,22 @@ class Table(object):
             stroke(0)
 
     @property
+    def left_title_extent(self):
+        return self.x
+
+    @property
+    def right_title_extent(self):
+        return self.x + self.width
+
+    @property
+    def top_title_extent(self):
+        return self.y
+
+    @property
+    def bottom_title_extent(self):
+        return self.y + self.height
+
+    @property
     def left_extent(self):
         return self.x
 
@@ -376,14 +441,16 @@ class Table(object):
 class Column(object):
 
     def __init__(self, **kwargs):
+        self.x = 0
+        self.y = 0
         self.edit = False
-        self.name = None
+        self.name = ""
         self.type = None
         self.len = None
         self.ref = None
         self.width = 100
         self.height = 100
-        self.text_size = 24
+        self.text_size = TEXT_SIZE
         self.__dict__.update(kwargs)
 
     def to_dict(self):
@@ -435,6 +502,9 @@ class Column(object):
 
 def setup():
     global tables, application
+    frameRate(30)
+
+    #textFont(createFont("Courier", TEXT_SIZE, True))
 
     application = Application()
     size(page_width, page_height)
