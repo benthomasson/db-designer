@@ -4,8 +4,8 @@ import os
 import yaml
 import traceback
 
-page_height = 900
-page_width = 1600
+page_height = 1200
+page_width = 2500
 
 TEXT_SIZE = 18
 
@@ -128,34 +128,53 @@ class _Load(State):
                     print d
                 for model in d.get('models'):
                     table = Table(name=model.get('name'),
-                                  x=model.get('x'),
-                                  y=model.get('y'))
+                                  x=model.get('x', 0),
+                                  y=model.get('y', 0))
                     new_tables.append(table)
                     for field in model.get('fields'):
                         name = field.get('name')
                         ftype = field.get('type')
                         flen = field.get('len')
                         column = Column(name=":".join(map(str, filter(None, [name, ftype, flen]))),
-                                        x=model.get('x'),
-                                        y=model.get('y'),
+                                        x=model.get('x', 0),
+                                        y=model.get('y', 0),
                                         table=table)
                         table.columns.append(column)
                 for model in d.get('models'):
                     ts = [t for t in new_tables if t.name == model.get('name')]
                     assert len(ts) == 1
-                    table = ts[0]
+                    from_table = ts[0]
                     for field in model.get('fields'):
                         if field.get('ref') and field.get('ref_field'):
-                            cs = [c for c in table.columns if c.name.partition(":")[0] == field.get('name')]
+                            cs = [c for c in from_table.columns if c.name.partition(":")[0] == field.get('name')]
                             assert len(cs) == 1
                             from_column = cs[0]
                             ts = [t for t in new_tables if t.name == field.get('ref')]
                             assert len(ts) == 1
-                            table = ts[0]
-                            cs = [c for c in table.columns if c.name.partition(":")[0] == field.get('ref_field')]
+                            to_table = ts[0]
+                            cs = [c for c in to_table.columns if c.name.partition(":")[0] == field.get('ref_field')]
                             assert len(cs) == 1
                             to_column = cs[0]
                             from_column.connectors = [ForeignKey(from_column=from_column, to_column=to_column)]
+                        elif field.get('ref'):
+                            cs = [c for c in from_table.columns if c.name.partition(":")[0] == field.get('name')]
+                            if len(cs) == 1:
+                                from_column = cs[0]
+                                ts = [t for t in new_tables if t.name == field.get('ref')]
+                                if len(ts) == 0:
+                                    to_column = Column(name='pk')
+                                    to_table = Table(name=field.get('ref'), columns=[to_column])
+                                    to_column.table = to_table
+                                    new_tables.append(to_table)
+                                    from_column.connectors = [ForeignKey(from_column=from_column, to_column=to_column)]
+                                elif len(ts) == 1:
+                                    to_table = ts[0]
+                                    to_column = to_table.columns[0]
+                                    from_column.connectors = [ForeignKey(from_column=from_column, to_column=to_column)]
+                                else:
+                                    print "When connecting {0}.{1} expected one table named {2} found {3}".format(from_table.name, from_column.name, field.get('ref'), ts)
+                            else:
+                                print "When connecting {0}.{1} expected one column named {2} found {3}".format(from_table.name, field.get('name'), field.get('name'), cs)
                 tables = new_tables
             print "Read from {0}".format(selection)
             application.changeState(ReadyState)
@@ -466,8 +485,8 @@ class Table(object):
         self.text_color = 0
         self.text_size = TEXT_SIZE
         self.name = None
-        self.x = None
-        self.y = None
+        self.x = 0
+        self.y = 0
         self.width = 0
         self.height = 0
         self.full_height = 0
