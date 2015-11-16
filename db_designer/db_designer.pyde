@@ -4,8 +4,8 @@ import os
 import yaml
 import traceback
 
-page_height = 768
-page_width = 1024
+page_height = 900
+page_width = 1600
 
 TEXT_SIZE = 18
 
@@ -119,10 +119,10 @@ class _Load(State):
 
     def fileSelected(self, selection):
         global tables
-        tables = []
         try:
             print selection, type(selection)
             if selection:
+                new_tables = []
                 with open(selection.getAbsolutePath()) as f:
                     d = yaml.load(f.read())
                     print d
@@ -130,16 +130,33 @@ class _Load(State):
                     table = Table(name=model.get('name'),
                                   x=model.get('x'),
                                   y=model.get('y'))
-                    tables.append(table)
+                    new_tables.append(table)
                     for field in model.get('fields'):
                         name = field.get('name')
                         ftype = field.get('type')
                         flen = field.get('len')
-                        ref = field.get('ref')
-                        column = Column(name=":".join(map(str, filter(None, [name, ftype, flen, ref]))),
+                        column = Column(name=":".join(map(str, filter(None, [name, ftype, flen]))),
                                         x=model.get('x'),
-                                        y=model.get('y'))
+                                        y=model.get('y'),
+                                        table=table)
                         table.columns.append(column)
+                for model in d.get('models'):
+                    ts = [t for t in new_tables if t.name == model.get('name')]
+                    assert len(ts) == 1
+                    table = ts[0]
+                    for field in model.get('fields'):
+                        if field.get('ref') and field.get('ref_field'):
+                            cs = [c for c in table.columns if c.name.partition(":")[0] == field.get('name')]
+                            assert len(cs) == 1
+                            from_column = cs[0]
+                            ts = [t for t in new_tables if t.name == field.get('ref')]
+                            assert len(ts) == 1
+                            table = ts[0]
+                            cs = [c for c in table.columns if c.name.partition(":")[0] == field.get('ref_field')]
+                            assert len(cs) == 1
+                            to_column = cs[0]
+                            from_column.connectors = [ForeignKey(from_column=from_column, to_column=to_column)]
+                tables = new_tables
             print "Read from {0}".format(selection)
             application.changeState(ReadyState)
         except Exception:
@@ -308,6 +325,7 @@ class _ColumnEdit(State):
     def name(self):
         return "Editing {0} {1}".format(application.selected_table.name,
                                         application.editing_column.name)
+
     def mousePressed(self):
         column = application.editing_column
         if not (mouseX > column.left_extent and
@@ -340,9 +358,39 @@ class _ColumnEdit(State):
         else:
             application.editing_column.name += key
 
+    def mouseDragged(self):
+        application.connecting_column = application.editing_column
+        application.connecting_connector = ForeignKey(from_column=application.connecting_column,
+                                                      connecting=True)
+        application.connecting_column.connectors = [application.connecting_connector]
+        application.changeState(Connect)
 
 ColumnEdit = _ColumnEdit()
 
+class _Connect(State):
+
+    def name(self):
+        return "Connecting {0}".format(application.connecting_column.name)
+
+    def end(self):
+        if (application.connecting_connector and
+            application.connecting_connector.to_column is None):
+                application.connecting_column.connectors.remove(application.connecting_connector)
+        application.connecting_connector = None
+        application.connecting_column = None
+
+    def mouseReleased(self):
+        for table in tables:
+            for column in table.columns:
+                if (mouseX > column.left_extent and
+                    mouseX < column.right_extent and
+                    mouseY > column.top_extent and
+                    mouseY < column.bottom_extent):
+                     application.connecting_connector.to_column = column
+                     break
+        application.changeState(ReadyState)
+
+Connect = _Connect()
 
 class Wheel(object):
 
@@ -382,6 +430,9 @@ class Application(object):
     def __init__(self):
         self.state = ReadyState
         self.selected_table = None
+        self.editing_column = None
+        self.connecting_column = None
+        self.connecting_connector = None
         self.wheel = None
 
     def changeState(self, state):
@@ -424,7 +475,7 @@ class Table(object):
 
     def add_empty_column(self):
         if all([c.name for c in self.columns]):
-            self.columns.append(Column())
+            self.columns.append(Column(table=self))
 
     def delete_empty_columns(self):
         for c in self.columns[:-1]:
@@ -460,6 +511,7 @@ class Table(object):
 
     def draw(self):
 
+
         stroke(0)
         strokeWeight(1)
         fill(self.color)
@@ -481,8 +533,9 @@ class Table(object):
 
         self.full_height = self._calculate_full_height()
 
+
         if self.selected:
-            strokeWeight(5)
+            strokeWeight(2)
             noFill()
             stroke("#66FFFF")
             rect(self.x, self.y, self.width, self.full_height)
@@ -525,6 +578,8 @@ class Table(object):
 class Column(object):
 
     def __init__(self, **kwargs):
+        self.table = None
+        self.connectors = []
         self.x = 0
         self.y = 0
         self.edit = False
@@ -546,6 +601,9 @@ class Column(object):
                 d['len'] = int(d['len'])
             except ValueError:
                 pass
+        if self.connectors:
+            d['ref'] = self.connectors[0].to_column.table.name
+            d['ref_field'] = self.connectors[0].to_column.name.partition(":")[0]
         d['x'] = self.x
         d['y'] = self.y
         return d
@@ -568,6 +626,7 @@ class Column(object):
         self.height = self.text_size + 30
         textSize(self.text_size)
         fill(255)
+        strokeWeight(1)
         rect(self.x, self.y, self.width, self.height)
         fill(0)
         if self.edit:
@@ -595,12 +654,38 @@ class Column(object):
 class ForeignKey(object):
 
     def __init__(self, **kwargs):
+        self.connecting = False
         self.from_column = None
         self.to_column = None
+        self.__dict__.update(kwargs)
 
     def draw(self):
         if self.from_column and self.to_column:
-            pass
+            y1 = (self.from_column.top_extent + self.from_column.bottom_extent) / 2
+            y2 = (self.to_column.top_extent + self.to_column.bottom_extent) / 2
+            if self.from_column.right_extent < self.to_column.left_extent:
+                x1 = self.from_column.right_extent
+                x2 = self.to_column.left_extent
+            elif self.from_column.left_extent > self.to_column.right_extent:
+                x1 = self.from_column.left_extent
+                x2 = self.to_column.right_extent
+            else:
+                x1 = (self.from_column.right_extent + self.from_column.left_extent) / 2
+                x2 = (self.to_column.right_extent + self.to_column.left_extent) / 2
+            strokeWeight(2)
+            line(x1, y1, x2, y2)
+        elif self.from_column and self.connecting:
+            if mouseX > self.from_column.right_extent:
+                x = self.from_column.right_extent
+                y = (self.from_column.top_extent + self.from_column.bottom_extent) / 2
+            elif mouseX < self.from_column.left_extent:
+                x = self.from_column.left_extent
+                y = (self.from_column.top_extent + self.from_column.bottom_extent) / 2
+            else:
+                x = (self.from_column.right_extent + self.from_column.left_extent) / 2
+                y = (self.from_column.top_extent + self.from_column.bottom_extent) / 2
+            strokeWeight(2)
+            line(x, y, mouseX, mouseY)
 
 
 def setup():
@@ -617,6 +702,10 @@ def draw():
     fill(126)
     rect(0,0, page_width, page_height)
     application.draw()
+    for table in tables:
+        for column in table.columns:
+            for connector in column.connectors:
+                connector.draw()
     for table in tables:
         table.draw()
 
