@@ -4,8 +4,8 @@ import os
 import yaml
 import traceback
 
-page_height = 1200
-page_width = 2500
+page_height = 768
+page_width = 1024
 
 TEXT_SIZE = 18
 
@@ -710,11 +710,11 @@ class ForeignKey(object):
 def setup():
     global tables, application
     frameRate(30)
+    size(page_width, page_height, FX2D)
 
     #textFont(createFont("Courier", TEXT_SIZE, True))
 
     application = Application()
-    size(page_width, page_height)
 
 
 def draw():
