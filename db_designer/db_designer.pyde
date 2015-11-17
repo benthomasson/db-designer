@@ -4,8 +4,13 @@ import os
 import yaml
 import traceback
 
-page_height = 768
-page_width = 1024
+mousePX = 0
+mousePY = 0
+panX = 0
+panY = 0
+
+page_height = 1024
+page_width = 2500
 
 TEXT_SIZE = 18
 
@@ -48,10 +53,10 @@ class State(object):
     def mouse_select(self):
 
         for table in tables:
-            if (mouseX > table.left_extent and
-                mouseX < table.right_extent and
-                mouseY > table.top_extent and
-                mouseY < table.bottom_extent):
+            if (mousePX > table.left_extent and
+                mousePX < table.right_extent and
+                mousePY > table.top_extent and
+                mousePY < table.bottom_extent):
                  application.selected_table = table
                  table.selected = True
                  application.changeState(SelectedTable)
@@ -60,13 +65,13 @@ class State(object):
         if application.selected_table:
             table = application.selected_table
             for column in table.columns:
-                if (mouseX > column.left_extent and
-                    mouseX < column.right_extent and
-                    mouseY > column.top_extent and
-                    mouseY < column.bottom_extent):
+                if (mousePX > column.left_extent and
+                    mousePX < column.right_extent and
+                    mousePY > column.top_extent and
+                    mousePY < column.bottom_extent):
                      application.editing_column = column
                      application.changeState(ColumnEdit)
-        if application.selected_table is None:
+        if application.selected_table is None and mouseButton == LEFT:
             application.changeState(MenuWheel)
 
 
@@ -77,11 +82,19 @@ class _ReadyState(State):
         return "Ready"
 
     def mousePressed(self):
+        global mousePressedX, mousePressedY
+        mousePressedX = mousePX
+        mousePressedY = mousePY
         application.selected_table = None
         self.mouse_select()
 
     def mouseDragged(self):
-        application.changeState(MenuWheel)
+        global panX, panY
+        if mouseButton == RIGHT or keyCode == CONTROL:
+            panX = panX + (mousePX - mousePressedX)
+            panY = panY + (mousePY - mousePressedY)
+        else:
+            application.changeState(MenuWheel)
 
 ReadyState = _ReadyState()
 
@@ -91,7 +104,7 @@ class _MenuWheel(State):
         return "Menu Wheel"
 
     def start(self):
-        application.wheel = Wheel(mouseX, mouseY)
+        application.wheel = Wheel(mousePX, mousePY)
 
     def end(self):
         application.wheel = None
@@ -225,27 +238,27 @@ class _SelectedTable(State):
 
     def mousePressed(self):
         table = application.selected_table
-        if not (mouseX > table.left_extent and
-                mouseX < table.right_extent and
-                mouseY > table.top_extent and
-                mouseY < table.bottom_extent):
+        if not (mousePX > table.left_extent and
+                mousePX < table.right_extent and
+                mousePY > table.top_extent and
+                mousePY < table.bottom_extent):
             self.end()
             table.selected = False
             application.selected_table = None
             self.mouse_select()
             return
-        if (mouseX > table.left_title_extent and
-            mouseX < table.right_title_extent and
-            mouseY > table.top_title_extent and
-            mouseY < table.bottom_title_extent):
+        if (mousePX > table.left_title_extent and
+            mousePX < table.right_title_extent and
+            mousePY > table.top_title_extent and
+            mousePY < table.bottom_title_extent):
             application.changeState(NameEdit)
             return
 
         for column in table.columns:
-            if (mouseX > column.left_extent and
-                mouseX < column.right_extent and
-                mouseY > column.top_extent and
-                mouseY < column.bottom_extent):
+            if (mousePX > column.left_extent and
+                mousePX < column.right_extent and
+                mousePY > column.top_extent and
+                mousePY < column.bottom_extent):
                  application.editing_column = column
                  application.changeState(ColumnEdit)
                  return
@@ -271,7 +284,7 @@ class _NewTable(State):
         return "New Table!"
 
     def start(self):
-        t = Table(name="New", x=mouseX, y=mouseY)
+        t = Table(name="New", x=mousePX, y=mousePY)
         tables.append(t)
         application.changeState(ReadyState)
 
@@ -284,14 +297,14 @@ class _MoveTable(State):
         return "Moving table {0}".format(application.selected_table.name)
 
     def start(self):
-         application.diffX = mouseX - application.selected_table.x
-         application.diffY = mouseY - application.selected_table.y
+         application.diffX = mousePX - application.selected_table.x
+         application.diffY = mousePY - application.selected_table.y
 
 
     def mouseDragged(self):
         if application.selected_table:
-            application.selected_table.x = mouseX - application.diffX
-            application.selected_table.y = mouseY - application.diffY
+            application.selected_table.x = mousePX - application.diffX
+            application.selected_table.y = mousePY - application.diffY
 
     def mouseReleased(self):
         application.changeState(SelectedTable)
@@ -314,10 +327,10 @@ class _NameEdit(State):
 
     def mousePressed(self):
         table = application.selected_table
-        if not (mouseX > table.left_title_extent and
-                mouseX < table.right_title_extent and
-                mouseY > table.top_title_extent and
-                mouseY < table.bottom_title_extent):
+        if not (mousePX > table.left_title_extent and
+                mousePX < table.right_title_extent and
+                mousePY > table.top_title_extent and
+                mousePY < table.bottom_title_extent):
             application.selected_table.edit = False
             application.selected_table = None
             self.mouse_select()
@@ -347,10 +360,10 @@ class _ColumnEdit(State):
 
     def mousePressed(self):
         column = application.editing_column
-        if not (mouseX > column.left_extent and
-                mouseX < column.right_extent and
-                mouseY > column.top_extent and
-                mouseY < column.bottom_extent):
+        if not (mousePX > column.left_extent and
+                mousePX < column.right_extent and
+                mousePY > column.top_extent and
+                mousePY < column.bottom_extent):
             self.end()
             application.selected_table = None
             self.mouse_select()
@@ -401,10 +414,10 @@ class _Connect(State):
     def mouseReleased(self):
         for table in tables:
             for column in table.columns:
-                if (mouseX > column.left_extent and
-                    mouseX < column.right_extent and
-                    mouseY > column.top_extent and
-                    mouseY < column.bottom_extent):
+                if (mousePX > column.left_extent and
+                    mousePX < column.right_extent and
+                    mousePY > column.top_extent and
+                    mousePY < column.bottom_extent):
                      application.connecting_connector.to_column = column
                      break
         application.changeState(ReadyState)
@@ -418,11 +431,11 @@ class Wheel(object):
         self.y = y
 
     def get_menu_selection(self):
-        if mouseX < self.x and mouseY < self.y:
+        if mousePX < self.x and mousePY < self.y:
             return "New"
-        elif mouseX > self.x and mouseY > self.y:
+        elif mousePX > self.x and mousePY > self.y:
             return "Save"
-        elif mouseX > self.x and mouseY < self.y:
+        elif mousePX > self.x and mousePY < self.y:
             return "Load"
         return None
 
@@ -441,7 +454,7 @@ class Wheel(object):
             line(self.x, self.y, self.x - 50, self.y)
             line(self.x, self.y, self.x, self.y - 50)
             line(self.x, self.y, self.x, self.y + 50)
-            line(self.x, self.y, mouseX, mouseY)
+            line(self.x, self.y, mousePX, mousePY)
 
 
 class Application(object):
@@ -467,10 +480,8 @@ class Application(object):
         text(self.state.name(),
              page_width - 100 - textWidth(self.state.name()),
              page_height - 100)
-        fps = "fps: {0}".format(int(frameRate))
-        text(fps,
-             page_width - 100 - textWidth(fps),
-             page_height - 50)
+
+
         if self.wheel:
             self.wheel.draw()
 
@@ -694,17 +705,17 @@ class ForeignKey(object):
             strokeWeight(2)
             line(x1, y1, x2, y2)
         elif self.from_column and self.connecting:
-            if mouseX > self.from_column.right_extent:
+            if mousePX > self.from_column.right_extent:
                 x = self.from_column.right_extent
                 y = (self.from_column.top_extent + self.from_column.bottom_extent) / 2
-            elif mouseX < self.from_column.left_extent:
+            elif mousePX < self.from_column.left_extent:
                 x = self.from_column.left_extent
                 y = (self.from_column.top_extent + self.from_column.bottom_extent) / 2
             else:
                 x = (self.from_column.right_extent + self.from_column.left_extent) / 2
                 y = (self.from_column.top_extent + self.from_column.bottom_extent) / 2
             strokeWeight(2)
-            line(x, y, mouseX, mouseY)
+            line(x, y, mousePX, mousePY)
 
 
 def setup():
@@ -718,8 +729,15 @@ def setup():
 
 
 def draw():
-    fill(126)
-    rect(0,0, page_width, page_height)
+    global mousePX, mousePY
+    mousePX = mouseX - panX
+    mousePY = mouseY - panY
+    background(126)
+    fps = "fps: {0}".format(int(frameRate))
+    text(fps,
+         page_width - 100 - textWidth(fps),
+         page_height - 50)
+    translate(panX, panY)
     application.draw()
     for table in tables:
         for column in table.columns:
