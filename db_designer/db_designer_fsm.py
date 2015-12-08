@@ -402,18 +402,26 @@ class NameEdit(State):
     def mouseDragged(self, controller):
         controller.changeState(MoveTable)
 
+    def keyReleased(self, controller):
+        if keyCode == 8:
+            controller.selected_table.name = controller.selected_table.name[:-1]
+
     @transition('SelectedTable')
     def keyTyped(self, controller):
-        if key == RETURN:
-            controller.changeState(SelectedTable)
-        elif key == ENTER:
-            controller.changeState(SelectedTable)
-        elif key == BACKSPACE:
-            controller.selected_table.name = controller.selected_table.name[:-1]
-        elif key == DELETE:
-            controller.selected_table.name = controller.selected_table.name[:-1]
+        if key == CODED:
+            if keyCode == 8:
+                controller.selected_table.name = controller.selected_table.name[:-1]
         else:
-            controller.selected_table.name += key
+            if key == RETURN:
+                controller.changeState(SelectedTable)
+            elif key == ENTER:
+                controller.changeState(SelectedTable)
+            elif key == BACKSPACE:
+                controller.selected_table.name = controller.selected_table.name[:-1]
+            elif key == DELETE:
+                controller.selected_table.name = controller.selected_table.name[:-1]
+            else:
+                controller.selected_table.name += key
 
 
 @singleton
@@ -440,18 +448,26 @@ class ColumnEdit(State):
         if controller.selected_table:
             controller.selected_table.delete_empty_columns()
 
+    def keyReleased(self, controller):
+        if keyCode == 8:
+            controller.editing_column.name = controller.editing_column.name[:-1]
+
     @transition('SelectedTable')
     def keyTyped(self, controller):
-        if key == RETURN:
-            controller.changeState(SelectedTable)
-        elif key == ENTER:
-            controller.changeState(SelectedTable)
-        elif key == BACKSPACE:
-            controller.editing_column.name = controller.editing_column.name[:-1]
-        elif key == DELETE:
-            controller.editing_column.name = controller.editing_column.name[:-1]
+        if key == CODED:
+            if keyCode == 8:
+                controller.editing_column.name = controller.editing_column.name[:-1]
         else:
-            controller.editing_column.name += key
+            if key == RETURN:
+                controller.changeState(SelectedTable)
+            elif key == ENTER:
+                controller.changeState(SelectedTable)
+            elif key == BACKSPACE:
+                controller.editing_column.name = controller.editing_column.name[:-1]
+            elif key == DELETE:
+                controller.editing_column.name = controller.editing_column.name[:-1]
+            else:
+                controller.editing_column.name += key
 
     @transition('Connect')
     def mouseDragged(self, controller):
