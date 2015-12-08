@@ -93,8 +93,8 @@ class Table(object):
         d = {}
         d['name'] = self.name
         d['fields'] = fields = []
-        d['x'] = self.x
-        d['y'] = self.y
+        d['x'] = int(self.x)
+        d['y'] = int(self.y)
         for column in self.columns:
             if column.name:
                 fields.append(column.to_dict())
@@ -221,8 +221,8 @@ class Column(object):
             d['ref_field'] = self.connectors[0].to_column.name.partition(":")[0]
         if d['name'].endswith("_id") and d.get('type') == "ForeignKey":
             d['name'] = d['name'][:-3]
-        d['x'] = self.x
-        d['y'] = self.y
+        d['x'] = int(self.x)
+        d['y'] = int(self.y)
         return d
 
     def _calculate_width(self):
