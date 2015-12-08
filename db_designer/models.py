@@ -212,9 +212,11 @@ class Column(object):
                 d['len'] = int(d['len'])
             except ValueError:
                 pass
-        if self.connectors and d['type'] == "ForeignKey":
+        if self.connectors and d.get('type') == "ForeignKey":
             d['ref'] = self.connectors[0].to_column.table.name
             d['ref_field'] = self.connectors[0].to_column.name.partition(":")[0]
+        if d['name'].endswith("_id") and d.get('type') == "ForeignKey":
+            d['name'] = d['name'][:-3]
         d['x'] = self.x
         d['y'] = self.y
         return d
