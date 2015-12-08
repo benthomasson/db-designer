@@ -210,6 +210,7 @@ class Load(State):
                                   x=model.get('x', random.randrange(int(controller.panX), int(width*controller.scaleXY + controller.panX))),
                                   y=model.get('y', random.randrange(int(controller.panY), int(height*controller.scaleXY + controller.panY))))
                     new_tables.append(table)
+                    print "new table:", table
                     for field in model.get('fields'):
                         name = field.get('name')
                         ftype = field.get('type')
@@ -231,9 +232,21 @@ class Load(State):
                             assert len(cs) == 1
                             from_column = cs[0]
                             ts = [t for t in new_tables if t.name == field.get('ref')]
-                            assert len(ts) == 1
+                            if len(ts) == 0:
+                                new_table = Table(name=field.get('ref'),
+                                                  x=random.randrange(int(controller.panX), int(width*controller.scaleXY + controller.panX)),
+                                                  y=random.randrange(int(controller.panX), int(width*controller.scaleXY + controller.panX)),
+                                                  external=True)
+                                new_tables.append(new_table)
+                                print "new external table:", table
+                                ts = [new_table]
+                            assert len(ts) == 1, repr(ts)
                             to_table = ts[0]
                             cs = [c for c in to_table.columns if c.name.partition(":")[0] == field.get('ref_field')]
+                            if len(cs) == 0:
+                                new_column = Column(name=field.get('ref_field'), x=0, y=0, pk=True, table=to_table)
+                                to_table.columns.append(new_column)
+                                cs = [new_column]
                             assert len(cs) == 1
                             to_column = cs[0]
                             from_column.connectors = [ForeignKey(from_column=from_column, to_column=to_column)]
@@ -293,7 +306,7 @@ class Save(State):
                 if controller.api:
                     app['api'] = controller.api
                 controller.app_name = app['app']
-                app['models'] = [t.to_dict() for t in controller.tables]
+                app['models'] = [t.to_dict() for t in controller.tables if not t.external]
                 with open(selection.getAbsolutePath(), 'w') as f:
                     f.write(yaml.safe_dump(app, default_flow_style=False))
             print "Wrote to {0}".format(selection)

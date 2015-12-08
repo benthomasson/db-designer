@@ -68,7 +68,11 @@ class Table(object):
         self.width = 0
         self.height = 0
         self.full_height = 0
+        self.external = False
         self.__dict__.update(kwargs)
+
+    def __repr__(self):
+        return "Table(name={0})".format(self.name)
 
     def is_selected(self, controller):
         return (controller.mousePX > self.left_extent and
