@@ -214,9 +214,11 @@ class Load(State):
                         name = field.get('name')
                         ftype = field.get('type')
                         flen = field.get('len')
+                        pk = field.get('pk', False)
                         column = Column(name=":".join(map(str, filter(None, [name, ftype, flen]))),
                                         x=model.get('x', 0),
                                         y=model.get('y', 0),
+                                        pk=pk,
                                         table=table)
                         table.columns.append(column)
                 for model in d.get('models'):
@@ -261,6 +263,8 @@ class Load(State):
                                                                                                                field.get('name'),
                                                                                                                cs)
                 view_d = d.get('view', {})
+                controller.modules = d.get('modules', [])
+                controller.api = d.get('api', None)
                 controller.panX = view_d.get('panX', 0)
                 controller.panY = view_d.get('panY', 0)
                 controller.scaleXY = view_d.get('scaleXY', 1)
@@ -285,6 +289,9 @@ class Save(State):
                 app = {}
                 app['app'] = os.path.splitext(os.path.basename(selection.getAbsolutePath()))[0]
                 app['view'] = dict(panX=controller.panX, panY=controller.panY, scaleXY=controller.scaleXY)
+                app['modules'] = controller.modules
+                if controller.api:
+                    app['api'] = controller.api
                 controller.app_name = app['app']
                 app['models'] = [t.to_dict() for t in controller.tables]
                 with open(selection.getAbsolutePath(), 'w') as f:

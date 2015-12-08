@@ -25,6 +25,8 @@ class Application(object):
         self.lastKeyCode = 0
         self.debug = False
         self.tables = []
+        self.modules = []
+        self.api = None
 
     def changeState(self, state):
         if self.state:
@@ -184,6 +186,7 @@ class Column(object):
         self.ref = None
         self.width = 100
         self.height = 100
+        self.pk = False
         self.text_size = my_settings.TEXT_SIZE
         self.__dict__.update(kwargs)
 
@@ -195,16 +198,19 @@ class Column(object):
 
     def to_dict(self):
         d = {}
+        d['pk'] = self.pk
         d['name'], _, rest = self.name.partition(":")
         if rest:
             d['type'], _, rest = rest.partition(":")
+            if d['type'] == "AutoField":
+                d['pk'] = True
         if rest:
             try:
                 d['len'], _, rest = rest.partition(":")
                 d['len'] = int(d['len'])
             except ValueError:
                 pass
-        if self.connectors:
+        if self.connectors and d['type'] == "ForeignKey":
             d['ref'] = self.connectors[0].to_column.table.name
             d['ref_field'] = self.connectors[0].to_column.name.partition(":")[0]
         d['x'] = self.x
