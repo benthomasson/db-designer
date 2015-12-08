@@ -1,6 +1,8 @@
 
 from conf import settings as my_settings
 
+from widgets import arrow
+
 
 class Application(object):
 
@@ -282,7 +284,7 @@ class ForeignKey(object):
                 x1 = (self.from_column.right_extent + self.from_column.left_extent) / 2
                 x2 = (self.to_column.right_extent + self.to_column.left_extent) / 2
             strokeWeight(2)
-            line(x1, y1, x2, y2)
+            arrow(x1, y1, x2, y2)
         elif self.from_column and self.connecting:
             if controller.mousePX > self.from_column.right_extent:
                 x = self.from_column.right_extent
@@ -294,4 +296,4 @@ class ForeignKey(object):
                 x = (self.from_column.right_extent + self.from_column.left_extent) / 2
                 y = (self.from_column.top_extent + self.from_column.bottom_extent) / 2
             strokeWeight(2)
-            line(x, y, controller.mousePX, controller.mousePY)
+            arrow(x, y, controller.mousePX, controller.mousePY)
