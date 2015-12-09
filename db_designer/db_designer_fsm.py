@@ -208,7 +208,9 @@ class Load(State):
                 for model in d.get('models'):
                     table = Table(name=model.get('name'),
                                   x=model.get('x', random.randrange(int(controller.panX), int(width*controller.scaleXY + controller.panX))),
-                                  y=model.get('y', random.randrange(int(controller.panY), int(height*controller.scaleXY + controller.panY))))
+                                  y=model.get('y', random.randrange(int(controller.panY), int(height*controller.scaleXY + controller.panY))),
+                                  natural_key=model.get('natural_key'),
+                                  natural_keys=model.get('natural_keys', []))
                     new_tables.append(table)
                     print "new table:", table
                     for field in model.get('fields'):

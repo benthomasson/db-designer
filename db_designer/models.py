@@ -69,6 +69,8 @@ class Table(object):
         self.height = 0
         self.full_height = 0
         self.external = False
+        self.natural_key = None
+        self.natural_keys = []
         self.__dict__.update(kwargs)
 
     def __repr__(self):
@@ -95,6 +97,10 @@ class Table(object):
         d['fields'] = fields = []
         d['x'] = int(self.x)
         d['y'] = int(self.y)
+        if self.natural_key:
+            d['natural_key'] = self.natural_key
+        if self.natural_keys:
+            d['natural_keys'] = self.natural_keys
         for column in self.columns:
             if column.name:
                 fields.append(column.to_dict())
