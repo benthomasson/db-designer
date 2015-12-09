@@ -210,7 +210,8 @@ class Column(object):
 
     def to_dict(self):
         d = {}
-        d['pk'] = self.pk
+        if self.pk:
+            d['pk'] = self.pk
         d['name'], _, rest = self.name.partition(":")
         if rest:
             d['type'], _, rest = rest.partition(":")
