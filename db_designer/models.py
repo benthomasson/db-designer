@@ -227,8 +227,6 @@ class Column(object):
             d['ref_field'] = self.connectors[0].to_column.name.partition(":")[0]
         if d['name'].endswith("_id") and d.get('type') == "ForeignKey":
             d['name'] = d['name'][:-3]
-        d['x'] = int(self.x)
-        d['y'] = int(self.y)
         return d
 
     def _calculate_width(self):
