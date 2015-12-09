@@ -205,12 +205,15 @@ class Load(State):
                 with open(selection_file_name) as f:
                     d = yaml.load(f.read())
                     print d
-                for model in d.get('models'):
+                for model in d.get('external_models', []):
+                    model['external'] = True
+                for model in d.get('external_models', []) + d.get('models', []):
                     table = Table(name=model.get('name'),
                                   x=model.get('x', random.randrange(int(controller.panX), int(width*controller.scaleXY + controller.panX))),
                                   y=model.get('y', random.randrange(int(controller.panY), int(height*controller.scaleXY + controller.panY))),
                                   natural_key=model.get('natural_key'),
-                                  natural_keys=model.get('natural_keys', []))
+                                  natural_keys=model.get('natural_keys', []),
+                                  external=model.get('external', False))
                     new_tables.append(table)
                     print "new table:", table
                     for field in model.get('fields'):
@@ -309,6 +312,7 @@ class Save(State):
                     app['api'] = controller.api
                 controller.app_name = app['app']
                 app['models'] = [t.to_dict() for t in controller.tables if not t.external]
+                app['external_models'] = [t.to_dict() for t in controller.tables if t.external]
                 with open(selection.getAbsolutePath(), 'w') as f:
                     f.write(yaml.safe_dump(app, default_flow_style=False))
             print "Wrote to {0}".format(selection)
