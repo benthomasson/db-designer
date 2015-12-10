@@ -222,11 +222,14 @@ class Load(State):
                         ftype = field.get('type')
                         flen = field.get('len')
                         pk = field.get('pk', False)
+                        related_name = field.get('related_name', None)
                         column = Column(name=":".join(map(str, filter(None, [name, ftype, flen]))),
                                         x=model.get('x', 0),
                                         y=model.get('y', 0),
                                         pk=pk,
+                                        related_name=related_name,
                                         table=table)
+                        print name, related_name
                         table.columns.append(column)
                 for model in d.get('models'):
                     ts = [t for t in new_tables if t.name == model.get('name')]

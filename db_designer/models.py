@@ -202,6 +202,7 @@ class Column(object):
         self.width = 100
         self.height = 100
         self.pk = False
+        self.related_name = None
         self.text_size = my_settings.TEXT_SIZE
         self.__dict__.update(kwargs)
 
@@ -215,6 +216,8 @@ class Column(object):
         d = {}
         if self.pk:
             d['pk'] = self.pk
+        if self.related_name is not None:
+            d['related_name'] = self.related_name
         d['name'], _, rest = self.name.partition(":")
         if rest:
             d['type'], _, rest = rest.partition(":")
