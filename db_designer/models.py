@@ -71,6 +71,7 @@ class Table(object):
         self.external = False
         self.natural_key = None
         self.natural_keys = []
+        self.ordering = []
         self.__dict__.update(kwargs)
 
     def __repr__(self):
@@ -101,6 +102,8 @@ class Table(object):
             d['natural_key'] = self.natural_key
         if self.natural_keys:
             d['natural_keys'] = self.natural_keys
+        if self.ordering:
+            d['ordering'] = self.ordering
         for column in self.columns:
             if column.name:
                 fields.append(column.to_dict())

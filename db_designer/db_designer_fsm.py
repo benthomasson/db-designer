@@ -213,6 +213,7 @@ class Load(State):
                                   y=model.get('y', random.randrange(int(controller.panY), int(height*controller.scaleXY + controller.panY))),
                                   natural_key=model.get('natural_key'),
                                   natural_keys=model.get('natural_keys', []),
+                                  ordering=model.get('ordering', []),
                                   external=model.get('external', False))
                     new_tables.append(table)
                     print "new table:", table
