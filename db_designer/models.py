@@ -29,6 +29,7 @@ class Application(object):
         self.tables = []
         self.modules = []
         self.api = None
+        self.mouse_pointer = None
 
     def changeState(self, state):
         if self.state:
@@ -52,6 +53,9 @@ class Application(object):
         if self.wheel:
             self.wheel.draw(controller)
 
+        if self.mouse_pointer:
+            self.mouse_pointer.draw()
+
 
 class Table(object):
 
@@ -71,6 +75,7 @@ class Table(object):
         self.external = False
         self.natural_key = None
         self.natural_keys = []
+        self.display = None
         self.ordering = []
         self.__dict__.update(kwargs)
 
@@ -100,6 +105,8 @@ class Table(object):
         d['y'] = int(self.y)
         if self.natural_key:
             d['natural_key'] = self.natural_key
+        if self.display:
+            d['display'] = self.display
         if self.natural_keys:
             d['natural_keys'] = self.natural_keys
         if self.ordering:

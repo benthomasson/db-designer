@@ -6,7 +6,7 @@ import logging
 import random
 
 from models import Table, Column, ForeignKey
-from widgets import Wheel
+from widgets import Wheel, MagnifyingGlassMousePointer, MoveMousePointer
 
 
 def singleton(klass):
@@ -140,6 +140,10 @@ class ScaleAndPan(State):
         controller.oldPanX = controller.panX
         controller.oldPanY = controller.panY
         controller.oldScaleXY = controller.scaleXY
+        controller.mouse_pointer = MoveMousePointer()
+
+    def end(self, controller):
+        controller.mouse_pointer = None
 
     def mouseDragged(self, controller):
         if mouseButton == LEFT and controller.lastKeyCode == ALT:
@@ -153,13 +157,17 @@ class ScaleAndPan(State):
     @transition('ReadyState')
     def mouseReleased(self, controller):
         controller.lastKeyCode = 0
+        controller.mouse_pointer = None
         controller.changeState(ReadyState)
 
     def keyPressed(self, controller):
         controller.lastKeyCode = keyCode
+        if controller.lastKeyCode == ALT:
+            controller.mouse_pointer = MagnifyingGlassMousePointer()
 
     def keyReleased(self, controller):
         controller.lastKeyCode = 0
+        controller.mouse_pointer = MoveMousePointer()
 
 
 @singleton
@@ -211,6 +219,7 @@ class Load(State):
                     table = Table(name=model.get('name'),
                                   x=model.get('x', random.randrange(int(controller.panX), int(width*controller.scaleXY + controller.panX))),
                                   y=model.get('y', random.randrange(int(controller.panY), int(height*controller.scaleXY + controller.panY))),
+                                  display=model.get('display'),
                                   natural_key=model.get('natural_key'),
                                   natural_keys=model.get('natural_keys', []),
                                   ordering=model.get('ordering', []),
