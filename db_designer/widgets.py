@@ -23,6 +23,18 @@ class MagnifyingGlassMousePointer(object):
         translate(self.size / 2, 0)
         line(self.size / 2, 0, 0, 0)
         popMatrix()
+        pushMatrix()
+        translate(x, y)
+        rotate(pi/2)
+        for r in xrange(2):
+            rotate(pi)
+            pushMatrix()
+            translate(self.size, 0)
+            line(self.size / 2, 0, 0, 0)
+            translate(self.size / 2, 0)
+            triangle(0, 0, -4, 2, -4, -2)
+            popMatrix()
+        popMatrix()
 
 
 class MoveMousePointer(object):

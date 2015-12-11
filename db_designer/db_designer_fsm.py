@@ -140,14 +140,17 @@ class ScaleAndPan(State):
         controller.oldPanX = controller.panX
         controller.oldPanY = controller.panY
         controller.oldScaleXY = controller.scaleXY
-        controller.mouse_pointer = MoveMousePointer()
+        if controller.lastKeyCode == ALT:
+            controller.mouse_pointer = MagnifyingGlassMousePointer()
+        else:
+            controller.mouse_pointer = MoveMousePointer()
 
     def end(self, controller):
         controller.mouse_pointer = None
 
     def mouseDragged(self, controller):
         if mouseButton == LEFT and controller.lastKeyCode == ALT:
-            controller.scaleXY = max(0.1, (mouseY - controller.mousePressedY) / 100.0 + controller.oldScaleXY)
+            controller.scaleXY = max(0.1, (controller.mousePressedY - mouseY) / 100.0 + controller.oldScaleXY)
             controller.panX = controller.oldPanX + (-1 * controller.mousePressedX / controller.oldScaleXY) + (controller.mousePressedX / controller.scaleXY)
             controller.panY = controller.oldPanY + (-1 * controller.mousePressedY / controller.oldScaleXY) + (controller.mousePressedY / controller.scaleXY)
         elif mouseButton == LEFT:

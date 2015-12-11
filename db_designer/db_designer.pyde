@@ -60,10 +60,12 @@ def mouseReleased():
 
 
 def keyPressed():
+    application.lastKeyCode = keyCode
     application.state.keyPressed(application)
 
 
 def keyReleased():
+    application.lastKeyCode = 0
     application.state.keyReleased(application)
 
 
