@@ -2,6 +2,7 @@
 from conf import settings as my_settings
 
 from widgets import arrow
+from processing_widgets.widgets import Button, ButtonBar
 
 
 class Application(object):
@@ -30,6 +31,18 @@ class Application(object):
         self.modules = []
         self.api = None
         self.mouse_pointer = None
+        self.active_widgets = []
+        self.active_widgets.append(Button(x=0, y=0, label="Save", call_back=self.save))
+        self.active_widgets.append(Button(x=0, y=0, label="Load", call_back=self.load))
+        self.button_bar = ButtonBar(self.active_widgets, 10, 10)
+
+    def save(self, button):
+        from db_designer_fsm import Save
+        self.changeState(Save)
+
+    def load(self, button):
+        from db_designer_fsm import Load
+        self.changeState(Load)
 
     def changeState(self, state):
         if self.state:
@@ -40,7 +53,7 @@ class Application(object):
 
     def draw(self, controller):
         if self.debug:
-            fill(255)
+            fill(my_settings.COLOR)
             textSize(my_settings.TEXT_SIZE)
             text(self.state.name(),
                  width - 100 - textWidth(self.state.name()),
@@ -53,6 +66,8 @@ class Application(object):
         if self.wheel:
             self.wheel.draw(controller)
 
+        self.button_bar.draw()
+
         if self.mouse_pointer:
             self.mouse_pointer.draw()
 
@@ -64,7 +79,6 @@ class Table(object):
         self.selected = False
         self.columns = []
         self.color = 200
-        self.text_color = 0
         self.text_size = my_settings.TEXT_SIZE
         self.name = None
         self.x = 0
@@ -141,7 +155,7 @@ class Table(object):
         self.height = self._calculate_height()
         self.height = self.text_size + 30
         rect(self.x, self.y, self.width, self.height)
-        fill(self.text_color)
+        fill(my_settings.COLOR)
         textSize(self.text_size)
         if self.edit:
             text(self.name + "_", self.x + 10, self.y + self.text_size + 10)
@@ -262,8 +276,9 @@ class Column(object):
         textSize(self.text_size)
         fill(255)
         strokeWeight(1)
+        stroke(my_settings.COLOR)
         rect(self.x, self.y, self.width, self.height)
-        fill(0)
+        fill(my_settings.COLOR)
         if self.edit:
             text(self.name + "_", self.x + 10, self.y + self.text_size + 10)
         else:

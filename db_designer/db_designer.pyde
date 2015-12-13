@@ -33,7 +33,7 @@ def draw():
     application.mousePX = mouseX / application.scaleXY - application.panX
     application.mousePY = mouseY / application.scaleXY - application.panY
     frame.setTitle(application.app_name)
-    background(126)
+    background(255)
     pushMatrix()
     scale_and_pan()
     for table in application.tables:
@@ -43,11 +43,27 @@ def draw():
     for table in application.tables:
         table.draw(application)
     popMatrix()
+    for widget in application.active_widgets:
+        if (mouseX > widget.left_extent and
+                mouseX < widget.right_extent and
+                mouseY > widget.top_extent and
+                mouseY < widget.bottom_extent):
+            widget.mouseOver()
+        else:
+            widget.mouseOut()
+            widget.mouseReleased()
     application.draw(application)
     scale_and_pan()
 
 
 def mousePressed():
+    for widget in application.active_widgets:
+        if (mouseX > widget.left_extent and
+                mouseX < widget.right_extent and
+                mouseY > widget.top_extent and
+                mouseY < widget.bottom_extent):
+            widget.mousePressed()
+            return
     application.state.mousePressed(application)
 
 
@@ -57,6 +73,12 @@ def mouseDragged():
 
 def mouseReleased():
     application.state.mouseReleased(application)
+    for widget in application.active_widgets:
+        if (mouseX > widget.left_extent and
+                mouseX < widget.right_extent and
+                mouseY > widget.top_extent and
+                mouseY < widget.bottom_extent):
+            widget.mouseReleased()
 
 
 def keyPressed():
