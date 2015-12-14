@@ -3,6 +3,8 @@ from conf import settings as my_settings
 
 from widgets import arrow
 from processing_widgets.widgets import Button, ButtonBar
+import os
+from subprocess import Popen, PIPE
 
 
 class Application(object):
@@ -30,10 +32,13 @@ class Application(object):
         self.tables = []
         self.modules = []
         self.api = None
+        self.generate = None
+        self.directory = None
         self.mouse_pointer = None
         self.active_widgets = []
         self.active_widgets.append(Button(x=0, y=0, label="Save", call_back=self.save))
         self.active_widgets.append(Button(x=0, y=0, label="Load", call_back=self.load))
+        self.active_widgets.append(Button(x=0, y=0, label="Generate", call_back=self.generate_button))
         self.button_bar = ButtonBar(self.active_widgets, 10, 10)
 
     def save(self, button):
@@ -43,6 +48,10 @@ class Application(object):
     def load(self, button):
         from db_designer_fsm import Load
         self.changeState(Load)
+
+    def generate_button(self, button):
+        p = Popen(self.generate, shell=True, cwd=self.directory)
+        p.communicate()
 
     def changeState(self, state):
         if self.state:

@@ -212,10 +212,11 @@ class Load(State):
                 new_tables = []
                 selection_file_name = selection.getAbsolutePath()
                 logging.debug(selection_file_name)
-                controller.app_name = os.path.splitext(os.path.basename(selection_file_name))[0]
+                controller.directory = os.path.dirname(selection.getAbsolutePath())
                 with open(selection_file_name) as f:
                     d = yaml.load(f.read())
                     print d
+                controller.app_name = d.get('app', os.path.splitext(os.path.basename(selection_file_name))[0])
                 for model in d.get('external_models', []):
                     model['external'] = True
                 for model in d.get('external_models', []) + d.get('models', []):
@@ -299,6 +300,7 @@ class Load(State):
                 view_d = d.get('view', {})
                 controller.modules = d.get('modules', [])
                 controller.api = d.get('api', None)
+                controller.generate = d.get('generate', None)
                 controller.panX = view_d.get('panX', 0)
                 controller.panY = view_d.get('panY', 0)
                 controller.scaleXY = view_d.get('scaleXY', 1)
@@ -322,10 +324,13 @@ class Save(State):
             if selection:
                 app = {}
                 app['app'] = os.path.splitext(os.path.basename(selection.getAbsolutePath()))[0]
+                controller.directory = os.path.dirname(selection.getAbsolutePath())
                 app['view'] = dict(panX=controller.panX, panY=controller.panY, scaleXY=controller.scaleXY)
                 app['modules'] = controller.modules
                 if controller.api:
                     app['api'] = controller.api
+                if controller.generate:
+                    app['generate'] = controller.generate
                 controller.app_name = app['app']
                 app['models'] = [t.to_dict() for t in controller.tables if not t.external]
                 app['external_models'] = [t.to_dict() for t in controller.tables if t.external]
