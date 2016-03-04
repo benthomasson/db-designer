@@ -227,7 +227,8 @@ class Load(State):
                                   natural_key=model.get('natural_key'),
                                   natural_keys=model.get('natural_keys', []),
                                   ordering=model.get('ordering', []),
-                                  external=model.get('external', False))
+                                  external=model.get('external', False),
+                                  extra=model.get('extra', False))
                     new_tables.append(table)
                     print "new table:", table
                     for field in model.get('fields'):
@@ -246,7 +247,7 @@ class Load(State):
                         table.columns.append(column)
                 for model in d.get('models'):
                     ts = [t for t in new_tables if t.name == model.get('name')]
-                    assert len(ts) == 1
+                    assert len(ts) == 1, "Duplicate model %s" % model.get('name')
                     from_table = ts[0]
                     for field in model.get('fields'):
                         if field.get('ref') and field.get('ref_field'):

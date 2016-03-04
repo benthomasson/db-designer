@@ -1,4 +1,5 @@
 
+
 from conf import settings as my_settings
 
 from widgets import arrow
@@ -50,8 +51,10 @@ class Application(object):
         self.changeState(Load)
 
     def generate_button(self, button):
-        p = Popen(self.generate, shell=True, cwd=self.directory)
-        p.communicate()
+        p = Popen(self.generate, shell=True, cwd=self.directory, stdout=PIPE)
+        stdout, stderr = p.communicate()
+        print stderr
+        print stdout
 
     def changeState(self, state):
         if self.state:
@@ -96,6 +99,7 @@ class Table(object):
         self.height = 0
         self.full_height = 0
         self.external = False
+        self.extra = False
         self.natural_key = None
         self.natural_keys = []
         self.display = None
@@ -126,6 +130,8 @@ class Table(object):
         d['fields'] = fields = []
         d['x'] = int(self.x)
         d['y'] = int(self.y)
+        if self.extra:
+            d['extra'] = self.extra
         if self.natural_key:
             d['natural_key'] = self.natural_key
         if self.display:
@@ -255,10 +261,14 @@ class Column(object):
                 d['pk'] = True
         if rest:
             try:
-                d['len'], _, rest = rest.partition(":")
-                d['len'] = int(d['len'])
+                length, _, rest = rest.partition(":")
+                d['len'] = int(length)
             except ValueError:
-                pass
+                if length == "False" or length == "false":
+                    d['default'] = False
+                elif length == "True" or length == "true":
+                    d['default'] = true
+
         if self.connectors and d.get('type') == "ForeignKey":
             d['ref'] = self.connectors[0].to_column.table.name
             d['ref_field'] = self.connectors[0].to_column.name.partition(":")[0]
