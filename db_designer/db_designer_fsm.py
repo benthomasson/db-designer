@@ -235,9 +235,10 @@ class Load(State):
                         name = field.get('name')
                         ftype = field.get('type')
                         flen = field.get('len')
+                        fdefault = field.get('default')
                         pk = field.get('pk', False)
                         related_name = field.get('related_name', None)
-                        column = Column(name=":".join(map(str, filter(None, [name, ftype, flen]))),
+                        column = Column(name=":".join(map(str, filter(lambda x: x is not None, [name, ftype, flen or fdefault]))),
                                         x=model.get('x', 0),
                                         y=model.get('y', 0),
                                         pk=pk,
