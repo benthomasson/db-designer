@@ -112,6 +112,7 @@ class Table(object):
         self.full_height = 0
         self.external = False
         self.extra = False
+        self.view = False
         self.natural_key = None
         self.natural_keys = []
         self.display = None
@@ -144,6 +145,8 @@ class Table(object):
         d['y'] = int(self.y)
         if self.extra:
             d['extra'] = self.extra
+        if self.view:
+            d['view'] = self.view
         if self.natural_key:
             d['natural_key'] = self.natural_key
         if self.display:

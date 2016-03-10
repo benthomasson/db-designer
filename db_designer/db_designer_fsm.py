@@ -237,6 +237,7 @@ class Load(State):
                                   natural_keys=model.get('natural_keys', []),
                                   ordering=model.get('ordering', []),
                                   external=model.get('external', False),
+                                  view=model.get('view', False),
                                   extra=model.get('extra', False))
                     new_tables.append(table)
                     print "new table:", table
