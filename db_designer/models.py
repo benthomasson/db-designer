@@ -74,6 +74,18 @@ class Application(object):
             text(fps,
                  width - 100 - textWidth(fps),
                  height - 50)
+            try:
+                key_t = ""
+                key_t = "key: {0} keyCode: {1}".format(str(key).strip(), keyCode)
+            except Exception:
+                pass
+            text(key_t,
+                 width - 100 - textWidth(key_t),
+                 height - 70)
+            mouseButton_t = "mouseButton: {0}".format(mouseButton)
+            text(mouseButton_t,
+                 width - 100 - textWidth(mouseButton_t),
+                 height - 90)
 
         if self.wheel:
             self.wheel.draw(controller)

@@ -390,6 +390,13 @@ class SelectedTable(State):
     def mouseDragged(self, controller):
         controller.changeState(MoveTable)
 
+    @transition('Ready')
+    def keyReleased(self, controller):
+        if keyCode == 8:
+            controller.selected_table.selected = False
+            controller.tables.remove(controller.selected_table)
+            controller.changeState(ReadyState)
+
     @transition('ReadyState')
     def keyTyped(self, controller):
         if key == DELETE or key == BACKSPACE:
