@@ -4,9 +4,18 @@ import yaml
 import traceback
 import logging
 import random
+import re
 
 from models import Table, Column, ForeignKey
 from widgets import Wheel, MagnifyingGlassMousePointer, MoveMousePointer
+
+
+def snake_case(name):
+    '''
+    From: http://stackoverflow.com/questions/1175208/elegant-python-function-to-convert-camelcase-to-camel-case
+    '''
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
 def singleton(klass):
@@ -442,6 +451,12 @@ class NameEdit(State):
     def end(self, controller):
         if controller.selected_table:
             controller.selected_table.edit = False
+            if len(controller.selected_table.columns) == 0 or controller.selected_table.columns[0].name.strip() == "":
+                controller.selected_table.columns.insert(0, Column(name="{0}_id:AutoField".format(snake_case(controller.selected_table.name)),
+                                                                   table=controller.selected_table,
+                                                                   x=0,
+                                                                   y=0,
+                                                                   pk=True))
 
     @transition('MouseSelect')
     def mousePressed(self, controller):
@@ -553,5 +568,7 @@ class Connect(State):
                         controller.mousePY > column.top_extent and
                         controller.mousePY < column.bottom_extent):
                     controller.connecting_connector.to_column = column
+                    if controller.connecting_connector.from_column.name.strip() == "":
+                        controller.connecting_connector.from_column.name = "{0}:ForeignKey".format(snake_case(controller.connecting_connector.to_column.table.name))
                     break
         controller.changeState(ReadyState)
